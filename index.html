@@ -519,14 +519,19 @@ async function handleRegisterSubmit(form){
   errBox.classList.add('hidden');
   try{
     const payload = {
-      p_role: role, p_name:(fd.get('name')||'').trim(), p_contact:(fd.get('contact')||'').trim(),
-      p_grade: role==='student' ? Number(fd.get('grade')) : null,
-      p_class_room: role==='student' ? Number(fd.get('class_room')) : null,
-      p_seat_no: role==='student' ? Number(fd.get('seat_no')) : null,
-      p_code: role==='admin' ? fd.get('code') : null,
-      p_admin_kind: role==='admin' ? fd.get('admin_kind') : null,
-      p_manage_category_ids: role==='admin' ? fd.getAll('manage_cat') : null,
-    };
+  p_role: role,
+  p_name: (fd.get('name') || '').trim(),
+  p_contact: (fd.get('contact') || '').trim(),
+
+  p_grade: role === 'student' ? Number(fd.get('grade')) : null,
+  p_class_room: role === 'student' ? Number(fd.get('class_room')) : null,
+  p_seat_no: role === 'student' ? Number(fd.get('seat_no')) : null,
+
+  p_admin_type: role === 'admin' ? fd.get('admin_kind') : null,
+  p_subject: role === 'admin' ? fd.get('subject') : null,
+  p_code: role === 'admin' ? fd.get('code') : null,
+  p_manage_resource_ids: role === 'admin' ? fd.getAll('manage_cat') : [],
+};
     const profile = await callRpc('register_profile', payload);
     onLoginSuccess(profile);
   }catch(e){ errBox.textContent = errMsg(e.message); errBox.classList.remove('hidden'); }
