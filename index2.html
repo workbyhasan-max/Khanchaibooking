@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>ระบบการจอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+/* ============ Design tokens ============ */
+:root{
+  --purple-900:#2E1065; --purple-800:#4C1D95; --purple-700:#6D28D9; --purple-600:#7C3AED;
+  --purple-500:#8B5CF6; --purple-300:#C4B5FD; --purple-100:#F5F3FF;
+  --white:#FFFFFF; --ink:#201A32; --ink-soft:#655D7A; --ink-faint:#948BAA;
+  --green:#16A34A; --green-bg:#DCFCE7; --amber:#D97706; --amber-bg:#FEF3C7; --red:#DC2626; --red-bg:#FEE2E2;
+  --glass-bg:rgba(255,255,255,0.68); --glass-border:rgba(255,255,255,0.9);
+  --card-bg:#FFFFFF;
+  --r-xl:28px; --r-lg:22px; --r-md:16px; --r-sm:11px;
+  --shadow-soft:0 10px 34px -12px rgba(109,40,217,0.28);
+  --shadow-tight:0 4px 14px -6px rgba(109,40,217,0.22);
+  --bg-grad: radial-gradient(circle at 15% -8%, #EDE1FF 0%, transparent 50%), radial-gradient(circle at 105% 5%, #E0D3FF 0%, transparent 42%), linear-gradient(180deg,#FBF9FF 0%, #F3EEFE 100%);
+  --nav-bg: rgba(255,255,255,0.86);
+}
+body.dark{
+  --white:#28203E; --ink:#F3EEFE; --ink-soft:#C6BADE; --ink-faint:#8B80A8;
+  --card-bg:#2C2444;
+  --glass-bg:rgba(44,36,68,0.62); --glass-border:rgba(196,181,253,0.22);
+  --green-bg:#123420; --amber-bg:#3A2A0C; --red-bg:#3A1620;
+  --bg-grad: radial-gradient(circle at 15% -8%, #3B2166 0%, transparent 50%), radial-gradient(circle at 105% 5%, #2A1554 0%, transparent 42%), linear-gradient(180deg,#150B26 0%, #1B1130 100%);
+  --nav-bg: rgba(28,20,46,0.86);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Sarabun',sans-serif; background:var(--bg-grad); background-attachment:fixed;
+  color:var(--ink); min-height:100vh; transition:background .4s ease, color .3s ease;
+}
+h1,h2,h3,.display{font-family:'Prompt',sans-serif;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+::selection{background:var(--purple-300);}
+#app-shell{max-width:480px; margin:0 auto; min-height:100vh; position:relative; padding-bottom:92px;}
+.hidden{display:none !important;}
+a{color:inherit;}
+
+/* ============ Topbar ============ */
+.topbar{
+  display:flex; align-items:center; gap:10px; padding:16px 18px 10px;
+  position:sticky; top:0; z-index:20; backdrop-filter:blur(14px);
+  background:linear-gradient(180deg, var(--nav-bg) 70%, transparent);
+}
+.topbar .crest{
+  width:38px;height:38px;border-radius:12px;
+  background:linear-gradient(135deg,var(--purple-600),var(--purple-900));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;
+  box-shadow:var(--shadow-tight);
+}
+.topbar .titles{flex:1;min-width:0;}
+.topbar .titles .t1{font-weight:700;font-size:15px;line-height:1.2;}
+.topbar .titles .t2{font-size:11.5px;color:var(--ink-faint);}
+.icon-btn{
+  width:38px;height:38px;border-radius:50%;border:1px solid var(--glass-border);
+  background:var(--glass-bg); display:flex;align-items:center;justify-content:center;
+  font-size:16px; position:relative; color:var(--ink); transition:transform .15s ease;
+}
+.icon-btn:active{transform:scale(0.9);}
+.badge-dot{
+  position:absolute; top:-2px; right:-2px; width:15px;height:15px;border-radius:50%;
+  background:var(--red); color:#fff; font-size:9px; display:flex;align-items:center;justify-content:center;
+  font-weight:700; border:2px solid var(--nav-bg);
+}
+
+/* ============ Role select (หน้าแรก) ============ */
+.hero-wrap{padding:8px 20px 20px; text-align:center;}
+.hero-crest{
+  width:76px;height:76px;margin:18px auto 14px;border-radius:24px;
+  background:linear-gradient(145deg,var(--purple-500),var(--purple-900));
+  display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff;
+  box-shadow:var(--shadow-soft);
+}
+.hero-wrap h1{font-size:23px;margin:0 0 4px;font-weight:800;letter-spacing:.2px;}
+.hero-wrap p{margin:0;color:var(--ink-soft);font-size:13.5px;}
+.role-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:6px 18px 18px;}
+.role-card{
+  grid-column:span 1; border-radius:var(--r-lg); border:1px solid var(--glass-border);
+  background:var(--glass-bg); backdrop-filter:blur(16px); padding:18px 14px;
+  text-align:center; box-shadow:var(--shadow-tight); transition:transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.role-card:active{transform:scale(.95);}
+.role-card.wide{grid-column:span 2;}
+.role-card .ic{font-size:26px;}
+.role-card .lbl{font-weight:700;font-size:14px;}
+.role-card .sub{font-size:11px;color:var(--ink-faint);}
+
+/* ============ Cards / generic ============ */
+.section{padding:14px 18px;}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.section-title h2{font-size:16px;margin:0;font-weight:700;}
+.section-title .link{font-size:12.5px;color:var(--purple-600);font-weight:600;}
+.glass-card{
+  border-radius:var(--r-lg); background:var(--glass-bg); border:1px solid var(--glass-border);
+  backdrop-filter:blur(16px); box-shadow:var(--shadow-tight); padding:18px;
+}
+.solid-card{
+  border-radius:var(--r-lg); background:var(--card-bg); box-shadow:var(--shadow-tight); padding:16px;
+}
+.form-field{margin-bottom:13px;}
+.form-field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+.form-field input,.form-field select,.form-field textarea{
+  width:100%; padding:12px 14px; border-radius:var(--r-md); border:1.5px solid rgba(139,92,246,0.18);
+  background:var(--white); color:var(--ink); font-size:14.5px; outline:none; transition:border-color .15s;
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--purple-500);}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:13px 18px; border-radius:16px; border:none; font-weight:700; font-size:14.5px;
+  width:100%; transition:transform .15s ease, opacity .15s;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--purple-600),var(--purple-800)); color:#fff; box-shadow:var(--shadow-tight);}
+.btn-ghost{background:var(--glass-bg); color:var(--ink); border:1.5px solid var(--glass-border);}
+.btn-outline{background:transparent;border:1.5px solid var(--purple-500);color:var(--purple-600);}
+.btn-danger{background:linear-gradient(135deg,#EF4444,#B91C1C);color:#fff;}
+.btn-sm{padding:8px 12px;font-size:12.5px;border-radius:12px;width:auto;}
+.tab-switch{display:flex; gap:6px; padding:5px; background:rgba(139,92,246,0.08); border-radius:16px; margin-bottom:16px;}
+.tab-switch button{flex:1;padding:9px;border:none;background:transparent;border-radius:12px;font-weight:600;font-size:13px;color:var(--ink-soft);}
+.tab-switch button.active{background:var(--card-bg);color:var(--purple-700);box-shadow:var(--shadow-tight);}
+
+/* ============ Big menu (จอง) ============ */
+.mega-grid{display:flex;flex-direction:column;gap:12px;padding:6px 18px 14px;}
+.mega-tile{
+  border-radius:var(--r-xl); padding:22px 20px; color:#fff; position:relative; overflow:hidden;
+  box-shadow:var(--shadow-soft); display:flex;align-items:center;gap:16px;
+}
+.mega-tile .ic{font-size:34px;}
+.mega-tile .txt strong{font-size:17px;display:block;font-family:'Prompt',sans-serif;}
+.mega-tile .txt span{font-size:12px;opacity:.85;}
+.mega-tile.t1{background:linear-gradient(135deg,#8B5CF6,#5B21B6);}
+.mega-tile.t2{background:linear-gradient(135deg,#A78BFA,#7C3AED);}
+.mega-tile.t3{background:linear-gradient(135deg,#6D28D9,#2E1065);}
+.mega-tile::after{content:'';position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,0.12);}
+
+.crumb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-faint);padding:2px 18px 10px;flex-wrap:wrap;}
+.crumb b{color:var(--purple-600);cursor:pointer;}
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 18px 16px;}
+.subcat-tile{
+  border-radius:var(--r-lg); background:var(--glass-bg); border:1px solid var(--glass-border);
+  padding:16px 12px; text-align:center; box-shadow:var(--shadow-tight);
+}
+.subcat-tile .ic{font-size:22px;display:block;margin-bottom:6px;}
+.subcat-tile .lbl{font-size:12.5px;font-weight:700;}
+
+.res-card{
+  display:flex; gap:12px; align-items:center; background:var(--card-bg); border-radius:var(--r-lg);
+  padding:12px; margin:0 18px 10px; box-shadow:var(--shadow-tight);
+}
+.res-card .thumb{
+  width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,var(--purple-300),var(--purple-500));
+  display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex-shrink:0;
+}
+.res-card .info{flex:1;min-width:0;}
+.res-card .info .nm{font-weight:700;font-size:14px;}
+.res-card .info .qty{font-size:11.5px;color:var(--ink-faint);}
+.status-pill{font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:20px; white-space:nowrap;}
+.status-green{background:var(--green-bg);color:var(--green);}
+.status-amber{background:var(--amber-bg);color:var(--amber);}
+.status-red{background:var(--red-bg);color:var(--red);}
+
+/* resource detail */
+.detail-hero{
+  margin:0 18px 14px; border-radius:var(--r-xl); height:150px;
+  background:linear-gradient(135deg,var(--purple-500),var(--purple-900));
+  display:flex;align-items:center;justify-content:center;font-size:52px;color:#fff;box-shadow:var(--shadow-soft);
+}
+.stat-row{display:flex;gap:10px;margin:0 18px 14px;}
+.stat-box{flex:1;background:var(--card-bg);border-radius:var(--r-md);padding:12px;text-align:center;box-shadow:var(--shadow-tight);}
+.stat-box .n{font-family:'Prompt',sans-serif;font-weight:700;font-size:19px;}
+.stat-box .l{font-size:10.5px;color:var(--ink-faint);}
+
+.slot-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed rgba(139,92,246,0.18);font-size:12.5px;}
+.slot-row:last-child{border-bottom:none;}
+
+.book-card{
+  margin:0 18px 12px; border-radius:var(--r-lg); background:var(--card-bg); box-shadow:var(--shadow-tight); padding:14px;
+}
+.book-card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.book-card .top .nm{font-weight:700;font-size:14px;}
+.book-card .meta{font-size:12px;color:var(--ink-faint);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.book-card .actions{display:flex;gap:8px;}
+
+/* KPI + charts */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 18px 14px;}
+.kpi-card{background:var(--card-bg);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow-tight);}
+.kpi-card .n{font-family:'Prompt',sans-serif;font-weight:800;font-size:24px;}
+.kpi-card .l{font-size:11.5px;color:var(--ink-faint);}
+.chart-card{margin:0 18px 14px;background:var(--card-bg);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow-tight);}
+.chart-card h3{margin:0 0 10px;font-size:13.5px;}
+.chart-wrap{position:relative;height:180px;}
+
+/* bottom nav */
+.bottom-nav{
+  position:fixed; bottom:0; left:0; right:0; max-width:480px; margin:0 auto;
+  background:var(--nav-bg); backdrop-filter:blur(18px); display:flex;
+  border-top:1px solid var(--glass-border); padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  z-index:30;
+}
+.nav-item{
+  flex:1; display:flex;flex-direction:column;align-items:center;gap:3px; padding:6px 2px; border:none;
+  background:transparent; color:var(--ink-faint); font-size:10.5px; font-weight:600; border-radius:14px; position:relative;
+}
+.nav-item .ic{font-size:19px;}
+.nav-item.active{color:var(--purple-600);}
+.nav-item.active .ic{transform:translateY(-1px);}
+.nav-item .dot{position:absolute;top:2px;right:22%;width:7px;height:7px;border-radius:50%;background:var(--red);}
+
+/* toasts */
+#toast-zone{position:fixed;top:14px;left:0;right:0;max-width:440px;margin:0 auto;z-index:100;display:flex;flex-direction:column;gap:8px;padding:0 16px;pointer-events:none;}
+.toast{
+  background:var(--ink); color:#fff; padding:12px 16px; border-radius:16px; font-size:13px; font-weight:600;
+  box-shadow:0 10px 30px rgba(0,0,0,0.25); animation:toastIn .28s cubic-bezier(.2,.9,.3,1); display:flex;gap:8px;align-items:center;
+}
+body.dark .toast{background:#4C3A80;}
+.toast.err{background:#B91C1C;}
+.toast.ok{background:#15803D;}
+@keyframes toastIn{from{opacity:0;transform:translateY(-14px) scale(.96);} to{opacity:1;transform:translateY(0) scale(1);}}
+
+/* modal */
+.modal-back{position:fixed;inset:0;background:rgba(20,10,40,0.45);backdrop-filter:blur(3px);z-index:90;display:flex;align-items:flex-end;justify-content:center;}
+.modal-sheet{
+  background:var(--card-bg); width:100%; max-width:480px; border-radius:26px 26px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+  animation:sheetUp .25s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes sheetUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
+.modal-sheet h3{margin:0 0 6px;font-size:16px;}
+.modal-sheet p{margin:0 0 18px;color:var(--ink-soft);font-size:13.5px;}
+.modal-actions{display:flex;gap:10px;}
+
+/* Category picker — used for selecting resource groups in a focused popup */
+.picker-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 14px;border:1.5px solid rgba(139,92,246,.22);border-radius:var(--r-md);background:var(--white);color:var(--ink);font:inherit;text-align:left;}
+.picker-trigger .picker-value{font-size:13px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.picker-trigger .picker-arrow{color:var(--purple-600);font-size:18px;line-height:1;}
+.picker-sheet{max-height:82vh;display:flex;flex-direction:column;}
+.picker-sheet .picker-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;}
+.picker-sheet .picker-head .picker-icon{width:38px;height:38px;display:grid;place-items:center;flex:0 0 auto;border-radius:13px;background:var(--purple-100);font-size:19px;}
+.picker-list{overflow:auto;margin:0 -4px 16px;padding:2px 4px;}
+.picker-option{display:flex;align-items:center;gap:11px;padding:12px;border-bottom:1px solid rgba(139,92,246,.11);cursor:pointer;}
+.picker-option:last-child{border-bottom:0;}
+.picker-option input{width:18px;height:18px;accent-color:var(--purple-600);flex:0 0 auto;}
+.picker-option .picker-name{font-size:13.5px;font-weight:600;}
+.picker-option .picker-sub{font-size:11.5px;color:var(--ink-faint);margin-top:1px;}
+
+/* misc */
+.empty-state{text-align:center;padding:50px 24px;color:var(--ink-faint);}
+.empty-state .ic{font-size:40px;display:block;margin-bottom:10px;}
+.skeleton{background:linear-gradient(90deg, rgba(139,92,246,0.08) 25%, rgba(139,92,246,0.16) 37%, rgba(139,92,246,0.08) 63%); background-size:400% 100%; animation:sk 1.4s ease infinite; border-radius:var(--r-lg);}
+@keyframes sk{0%{background-position:100% 0;}100%{background-position:0 0;}}
+.fade-in{animation:fadeIn .28s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.search-bar{display:flex;gap:8px;padding:0 18px 12px;}
+.demo-ribbon{position:relative;background:linear-gradient(90deg,#F59E0B,#D97706);color:#fff;text-align:center;font-size:11px;font-weight:700;padding:9px 10px;letter-spacing:.2px;}
+.demo-login-row{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 4px;justify-content:center;}
+.demo-login-chip{padding:8px 12px;border-radius:14px;background:var(--glass-bg);border:1px dashed var(--purple-500);font-size:11.5px;font-weight:700;color:var(--purple-700);}
+.search-bar input{flex:1;padding:11px 14px;border-radius:16px;border:1.5px solid rgba(139,92,246,0.18);background:var(--white);color:var(--ink);font-size:13.5px;}
+.chip-row{display:flex;gap:7px;padding:0 18px 12px;overflow-x:auto;}
+.chip{padding:7px 13px;border-radius:20px;background:var(--glass-bg);border:1px solid var(--glass-border);font-size:12px;font-weight:600;white-space:nowrap;}
+.chip.active{background:var(--purple-600);color:#fff;border-color:transparent;}
+.err-text{color:var(--red);font-size:12.5px;margin-top:-6px;margin-bottom:10px;}
+table.hist{width:100%;border-collapse:collapse;font-size:12px;}
+table.hist th,table.hist td{padding:8px 6px;text-align:left;border-bottom:1px solid rgba(139,92,246,0.12);}
+
+/* ===== เพิ่มใหม่: กรอกรหัสประจำตัวนักเรียน 5 หลัก ===== */
+.otp-row{display:flex;gap:8px;justify-content:center;margin:6px 0 16px;}
+.otp-box{width:46px;height:56px;border-radius:14px;border:1.5px solid rgba(139,92,246,.22);background:var(--white);color:var(--ink);font-size:22px;font-weight:800;text-align:center;font-family:'Prompt',sans-serif;outline:none;transition:border-color .15s, transform .1s;}
+.otp-box:focus{border-color:var(--purple-500);transform:translateY(-1px);}
+.student-check-state{min-height:20px;text-align:center;font-size:12.5px;color:var(--ink-faint);margin-bottom:10px;}
+.student-found-card{border-radius:var(--r-lg);background:var(--green-bg);border:1.5px solid rgba(22,163,74,.25);padding:16px;margin-bottom:16px;animation:fadeIn .25s ease;}
+.student-found-card .row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+.student-found-card .row b{color:var(--ink);}
+.student-notfound-card{border-radius:var(--r-lg);background:var(--red-bg);border:1.5px solid rgba(220,38,38,.25);padding:14px 16px;margin-bottom:16px;font-size:12.5px;color:var(--red);text-align:center;animation:fadeIn .25s ease;}
+</style>
+</head>
+<body>
+<div id="toast-zone"></div>
+<div id="demo-ribbon" class="demo-ribbon hidden">🧪 โหมดทดลอง (Demo) — ข้อมูลตัวอย่างในเครื่องนี้เท่านั้น ยังไม่เชื่อมต่อฐานข้อมูลจริง</div>
+<div id="app-shell">
+  <div id="topbar-zone"></div>
+  <div id="view"></div>
+</div>
+<div id="nav-zone"></div>
+<div id="modal-zone"></div>
+
+<script>
+/* ============================================================
+   CONFIG — วางค่าจาก Supabase Project ของคุณตรงนี้ (Project Settings > API)
+   ============================================================ */
+const SUPABASE_URL = "https://ddiwficglqazozipgzdf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkaXdmaWNnbHFhem96aXBnemRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMzM2NzAsImV4cCI6MjEwMDkwOTY3MH0.tp9xf07jdGwNUuihqxyQ_64f67NQAZGbghPi1Z9KZd8";
+const SYSTEM_NAME = "ระบบการจอง";
+/* NOTE: วางค่า base64 โลโก้เดิมของคุณกลับมาแทนบรรทัดนี้บรรทัดเดียว (คัดลอกจากไฟล์ index.html ตัวเก่าของคุณ) */
+const SCHOOL_LOGO = "data:image/png;base64,__PASTE_YOUR_EXISTING_LOGO_BASE64_HERE__";
+</script>
+<script>
+/* ============================================================
+   ระบบการจอง — Application logic (vanilla JS, no build step)
+   ============================================================ */
+let sb = null;
+const state = {
+  profile:null, view:'roleSelect', pendingRole:null, authTab:'register',
+  crumbs:[], currentCategoryId:null, currentResourceId:null,
+  dashboardTab:'overview', apprFilter:'all', darkMode:false, notifUnread:0,
+  studentCode:'', studentLookup:null, studentChecking:false,
+  cache:{}
+};
+const viewEl = document.getElementById('view');
+const topbarEl = document.getElementById('topbar-zone');
+const navEl = document.getElementById('nav-zone');
+let bookingsChannel=null, notifChannel=null;
+
+/* ---------- helpers ---------- */
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return d; } }
+function fmtTime(t){ return (t||'').slice(0,5); }
+function roleLabel(r){ return {student:'นักเรียน',admin:'ผู้ดูแลระบบ',leader:'หัวหน้าห้อง',deputy:'รองหัวหน้าห้อง',teacher:'ครู'}[r]||r; }
+function bookingStatusLabel(s){ return {pending:'รออนุมัติ',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ',cancelled:'ยกเลิกแล้ว',withdrawn:'ถูกเรียกคืน',returned:'คืนแล้ว'}[s]||s; }
+function bookingPillCls(s){ return {pending:'status-amber',approved:'status-green',rejected:'status-red',cancelled:'status-red',withdrawn:'status-red',returned:'status-green'}[s]||''; }
+function resourceEmoji(name){
+  if(/แต่งหน้า/.test(name)) return '💄';
+  if(/ห้องคอมพิวเตอร์|ห้องคอม/.test(name)) return '🖥️';
+  if(/ห้อง|^\d\/\d/.test(name)) return '🏫';
+  if(/กีตาร์|กลอง|คีย์บอร์ด/.test(name)) return '🎸';
+  if(/ฟุตบอล|บาส|วอลเลย์/.test(name)) return '⚽';
+  if(/โต๊ะ|เก้าอี้/.test(name)) return '🪑';
+  return '📦';
+}
+function statusInfo(remaining, total){
+  if(remaining <= 0) return {cls:'status-red', label:'เต็ม'};
+  if(remaining <= Math.max(1, Math.ceil(total*0.2))) return {cls:'status-amber', label:'เหลือน้อย ('+remaining+')'};
+  return {cls:'status-green', label:'ว่าง ('+remaining+')'};
+}
+function errMsg(code){
+  const map = {
+    INVALID_TEACHER_CODE:'รหัสยืนยันครูไม่ถูกต้อง', INVALID_ADMIN_CODE:'รหัสลับผู้ดูแลระบบไม่ถูกต้อง',
+    CLASS_REQUIRED:'กรุณาเลือกห้อง', CLASS_LEADER_TAKEN:'ห้องนี้มีหัวหน้าห้องแล้ว', CLASS_DEPUTY_TAKEN:'ห้องนี้มีรองหัวหน้าห้องแล้ว',
+    RESOURCE_NOT_FOUND:'ไม่พบรายการนี้', INVALID_TIME_RANGE:'เวลาต้องอยู่ระหว่าง 06:00 - 16:30 น.',
+    NOT_ENOUGH_QTY:'จำนวนที่เหลือไม่พอสำหรับช่วงเวลานี้', NOT_AUTHORIZED:'คุณไม่มีสิทธิ์ทำรายการนี้',
+    NOT_YOUR_RESOURCE:'คุณไม่ได้ดูแลรายการนี้', BOOKING_NOT_FOUND:'ไม่พบรายการจอง',
+    NOT_YOUR_BOOKING:'ไม่ใช่รายการจองของคุณ', CANNOT_CANCEL:'ไม่สามารถยกเลิกรายการนี้ได้แล้ว',
+    PROFILE_NOT_FOUND:'ไม่พบข้อมูลผู้ใช้', INVALID_ROLE:'บทบาทไม่ถูกต้อง', ADMIN_KIND_REQUIRED:'กรุณาเลือกประเภทผู้ดูแลระบบ',
+    STUDENT_NOT_FOUND:'ไม่พบรหัสประจำตัวนี้ กรุณาตรวจสอบรหัสอีกครั้ง',
+  };
+  map.ADMIN_TYPE_REQUIRED = 'กรุณาเลือกประเภทผู้ดูแล';
+  map.DUPLICATE_PROFILE = 'ชื่อนี้ลงทะเบียนในระบบแล้ว กรุณาเข้าสู่ระบบด้วยชื่อเดิม';
+  map.CANNOT_DELETE_SELF = 'ไม่สามารถลบบัญชีที่กำลังใช้งานได้';
+  const key = String(code||'').match(/([A-Z_]+)/)?.[1];
+  return map[key] || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+}
+function showToast(msg, type=''){
+  const zone = document.getElementById('toast-zone');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.textContent = msg;
+  zone.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 2600);
+}
+function confirmModal({title, desc, okLabel='ยืนยัน', danger=false}){
+  return new Promise(resolve=>{
+    const zone = document.getElementById('modal-zone');
+    zone.innerHTML = `<div class="modal-back" data-modal-back><div class="modal-sheet">
+      <h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc||'')}</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-modal-cancel>ยกเลิก</button>
+        <button class="btn ${danger?'btn-danger':'btn-primary'}" data-modal-ok>${escapeHtml(okLabel)}</button>
+      </div></div></div>`;
+    zone.querySelector('[data-modal-ok]').onclick = ()=>{ zone.innerHTML=''; resolve(true); };
+    zone.querySelector('[data-modal-cancel]').onclick = ()=>{ zone.innerHTML=''; resolve(false); };
+    zone.querySelector('[data-modal-back]').onclick = (e)=>{ if(e.target===e.currentTarget){ zone.innerHTML=''; resolve(false);} };
+  });
+}
+async function callRpc(name, params, opts={}){
+  const { data, error } = await sb.rpc(name, params);
+  if(error){ if(!opts.silent) showToast(errMsg(error.message), 'err'); throw error; }
+  return data;
+}
+function exportCsv(filename, rows){
+  if(!rows.length){ showToast('ไม่มีข้อมูลให้ส่งออก','err'); return; }
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(',')].concat(
+    rows.map(r=>headers.map(h=>'"'+String(r[h]??'').replace(/"/g,'""')+'"').join(','))
+  ).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- data fetch helpers ---------- */
+async function fetchResource(id){ const {data,error}=await sb.from('resources').select('*').eq('id',id).single(); if(error){console.error(error); return null;} return data; }
+async function fetchTopCategories(){
+  const {data,error}=await sb.from('categories').select('*').is('parent_id',null).order('sort_order');
+  if(error){console.error(error);return [];}
+  /* เอา "อุปกรณ์" ออกจากหน้าแรกของระบบจอง — ข้อมูลเดิมในฐานข้อมูลยังอยู่ครบ แค่ไม่แสดงในเมนูจอง */
+  return data.filter(c => c.type !== 'equipment');
+}
+async function fetchSubcategories(parentId){ const {data,error}=await sb.from('categories').select('*').eq('parent_id',parentId).order('sort_order'); if(error){console.error(error);return [];} return data; }
+async function fetchResourcesWithStatus(categoryId){
+  const {data,error}=await sb.from('resources').select('*').eq('category_id',categoryId).eq('is_active',true).order('sort_order').order('name');
+  if(error){console.error(error);return [];}
+  return Promise.all(data.map(async r=>{
+    const reserved = await callRpc('qty_reserved',{p_resource_id:r.id,p_date:todayStr(),p_start:'00:00',p_end:'23:59'},{silent:true}).catch(()=>0);
+    r.status = statusInfo(r.total_qty - reserved, r.total_qty);
+    return r;
+  }));
+}
+function thumbHtml(r, size){
+  const s = size||'width:100%;height:100%;';
+  if(r && r.image_url) return `<img src="${escapeHtml(r.image_url)}" alt="" style="${s}object-fit:cover;border-radius:inherit;">`;
+  return resourceEmoji(r?r.name:'');
+}
+async function fetchAllResourcesFlat(){ const {data,error}=await sb.from('resources').select('id,name,category_id').order('name'); if(error){console.error(error);return [];} return data; }
+async function fetchAllCategoriesFlat(){
+  const {data} = await sb.from('categories').select('*').order('sort_order');
+  const byParent={}; (data||[]).forEach(c=>(byParent[c.parent_id||'root']||=[]).push(c));
+  const out=[]; (function walk(k,depth){ (byParent[k]||[]).forEach(c=>{ out.push({...c,depth}); walk(c.id,depth+1); }); })('root',0);
+  return out;
+}
+async function categoryIdsToResourceIds(categoryIds){
+  if(!categoryIds.length) return [];
+  const categories = state.cache.allCategoriesFlat || await fetchAllCategoriesFlat();
+  const children = {};
+  categories.forEach(c=>(children[c.parent_id] ||= []).push(c.id));
+  const allCategoryIds = new Set(categoryIds);
+  const visit = id => (children[id]||[]).forEach(child=>{ if(!allCategoryIds.has(child)){ allCategoryIds.add(child); visit(child); } });
+  categoryIds.forEach(visit);
+  const resources = await fetchAllResourcesFlat();
+  return resources.filter(r=>allCategoryIds.has(r.category_id)).map(r=>r.id);
+}
+function setManagerCategorySelection(ids){
+  const cats = state.cache.allCategoriesFlat || [];
+  const selected = cats.filter(c=>ids.includes(c.id));
+  const holder = document.getElementById('manage-category-inputs');
+  const summary = document.getElementById('manage-picker-summary');
+  if(holder) holder.innerHTML = selected.map(c=>`<input class="manage-category-id" type="hidden" name="manage_cat" value="${c.id}">`).join('');
+  if(summary) summary.textContent = selected.length ? selected.map(c=>c.name).join(', ') : 'ยังไม่ได้เลือกกลุ่ม';
+}
+function openManagerPicker(){
+  const cats = state.cache.allCategoriesFlat || [];
+  const selected = new Set([...document.querySelectorAll('.manage-category-id')].map(el=>el.value));
+  const zone = document.getElementById('modal-zone');
+  zone.innerHTML = `<div class="modal-back" data-modal-back><div class="modal-sheet picker-sheet">
+    <div class="picker-head"><div class="picker-icon">🗂️</div><div><h3>เลือกกลุ่มที่ดูแล</h3><p>เลือกได้หลายกลุ่ม ระบบจะรวมรายการย่อยในกลุ่มนั้นให้ด้วย</p></div></div>
+    <div class="picker-list">${cats.map(c=>`<label class="picker-option" style="padding-left:${12+c.depth*18}px"><input type="checkbox" value="${c.id}" ${selected.has(c.id)?'checked':''}><span><div class="picker-name">${escapeHtml(c.name)}</div>${c.depth ? '<div class="picker-sub">หมวดหมู่ย่อย</div>' : ''}</span></label>`).join('')}</div>
+    <div class="modal-actions"><button type="button" class="btn btn-ghost" data-modal-cancel>ยกเลิก</button><button type="button" class="btn btn-primary" data-manager-picker-save>ยืนยัน</button></div>
+  </div></div>`;
+  const close = ()=>{ zone.innerHTML=''; };
+  zone.querySelector('[data-modal-cancel]').onclick = close;
+  zone.querySelector('[data-modal-back]').onclick = e=>{ if(e.target===e.currentTarget) close(); };
+  zone.querySelector('[data-manager-picker-save]').onclick = ()=>{
+    setManagerCategorySelection([...zone.querySelectorAll('input:checked')].map(el=>el.value)); close();
+  };
+}
+
+/* ---------- render: shell ---------- */
+function render(){
+  renderTopbar(); renderNav();
+  switch(state.view){
+    case 'roleSelect': viewEl.innerHTML = tplRoleSelect(); break;
+    case 'studentRegister': viewEl.innerHTML = tplStudentRegister(); afterRenderStudentRegister(); break;
+    case 'authForm': viewEl.innerHTML = tplAuthForm(); break;
+    case 'booking': renderBookingHome(); break;
+    case 'categoryBrowse': renderCategoryBrowse(); break;
+    case 'resourceDetail': renderResourceDetail(); break;
+    case 'myBookings': renderMyBookings(); break;
+    case 'approvals': renderApprovals(); break;
+    case 'dashboard': renderDashboard(); break;
+    case 'settings': renderSettings(); break;
+  }
+  viewEl.classList.remove('fade-in'); void viewEl.offsetWidth; viewEl.classList.add('fade-in');
+}
+function renderTopbar(){
+  if(!state.profile){ topbarEl.innerHTML=''; return; }
+  topbarEl.innerHTML = `<div class="topbar">
+    <div class="crest"><img src="${SCHOOL_LOGO}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div>
+    <div class="titles"><div class="t1">${SYSTEM_NAME}</div><div class="t2">${escapeHtml(state.profile.name)} · ${roleLabel(state.profile.role)}</div></div>
+    <button class="icon-btn" data-action="toggle-dark">${state.darkMode?'☀️':'🌙'}</button>
+    <button class="icon-btn" data-action="open-notifs">🔔${state.notifUnread>0?'<span class="badge-dot">'+Math.min(state.notifUnread,9)+'</span>':''}</button>
+  </div>`;
+}
+function renderNav(){
+  if(!state.profile){ navEl.innerHTML=''; return; }
+  const role = state.profile.role;
+  let items = [['booking','จอง','📅'],['myBookings','ของที่จอง','🗂️']];
+  if(role==='admin'){ items.push(['approvals','การอนุมัติ','✅']); items.push(['dashboard','Dashboard','📊']); }
+  items.push(['settings','ตั้งค่า','⚙️']);
+  navEl.innerHTML = `<div class="bottom-nav">${items.map(([v,l,ic])=>`
+    <button class="nav-item ${state.view===v?'active':''}" data-action="nav" data-view="${v}"><span class="ic">${ic}</span><span>${l}</span></button>`).join('')}</div>`;
+}
+
+/* ---------- role select ---------- */
+function tplRoleSelect(){
+  return `<div class="hero-wrap"><div class="hero-crest"><img src="${SCHOOL_LOGO}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div><h1>${SYSTEM_NAME}</h1><p>เลือกสถานะของคุณเพื่อเริ่มต้นใช้งาน</p></div>
+  <div class="role-grid">
+    <button class="role-card" data-action="pick-role" data-role="student"><span class="ic">🧑‍🎓</span><span class="lbl">นักเรียน</span></button>
+    <button class="role-card" data-action="pick-role" data-role="admin"><span class="ic">🛡️</span><span class="lbl">ผู้ดูแลระบบ</span></button>
+  </div>`;
+}
+async function pickRole(role){
+  state.pendingRole = role;
+  if(role==='student'){
+    /* นักเรียน: ไม่มีตัวเลือกอื่น มีแค่ "ลงทะเบียน" ด้วยรหัสประจำตัว 5 หลัก */
+    state.studentCode=''; state.studentLookup=null; state.studentChecking=false;
+    state.view='studentRegister'; render(); return;
+  }
+  state.authTab='register'; state.registerAdminKind='teacher';
+  if(!state.cache.teacherDirectory){
+    const { data } = await sb.from('teacher_directory').select('*').order('name');
+    state.cache.teacherDirectory = data || [];
+  }
+  state.cache.allCategoriesFlat = await fetchAllCategoriesFlat();
+  state.view='authForm'; render();
+}
+
+/* ---------- student: กรอกรหัสประจำตัว 5 หลัก แล้วดึงชื่อ/ห้องจากฐานข้อมูลเท่านั้น ---------- */
+function tplStudentRegister(){
+  return `<div class="section">
+    <button class="btn btn-outline btn-sm" data-action="back-to-roles" style="margin-bottom:14px;">‹ กลับ</button>
+    <div class="glass-card">
+      <h2 style="margin:0 0 4px;font-size:18px;">ลงทะเบียนนักเรียน</h2>
+      <p style="margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;">กรอกรหัสประจำตัวนักเรียน 5 ตัวหลัง ระบบจะดึงชื่อและห้องของคุณให้อัตโนมัติ</p>
+      <div class="otp-row" id="otp-row">
+        ${[0,1,2,3,4].map(i=>`<input class="otp-box" data-otp-idx="${i}" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off">`).join('')}
+      </div>
+      <div class="student-check-state" id="student-check-state"></div>
+      <div id="student-result"></div>
+      <div id="student-confirm-zone"></div>
+    </div></div>`;
+}
+function afterRenderStudentRegister(){
+  const boxes = [...document.querySelectorAll('.otp-box')];
+  if(!boxes.length) return;
+  boxes[0].focus();
+  boxes.forEach((box, idx)=>{
+    box.addEventListener('input', ()=>{
+      box.value = box.value.replace(/[^0-9]/g,'').slice(0,1);
+      if(box.value && boxes[idx+1]) boxes[idx+1].focus();
+      onStudentCodeChange(boxes);
+    });
+    box.addEventListener('keydown', (e)=>{
+      if(e.key==='Backspace' && !box.value && boxes[idx-1]){ boxes[idx-1].focus(); }
+    });
+    box.addEventListener('paste', (e)=>{
+      e.preventDefault();
+      const digits = (e.clipboardData.getData('text')||'').replace(/[^0-9]/g,'').slice(0,5).split('');
+      digits.forEach((d,i)=>{ if(boxes[i]) boxes[i].value = d; });
+      (boxes[digits.length] || boxes[boxes.length-1]).focus();
+      onStudentCodeChange(boxes);
+    });
+  });
+}
+let studentLookupTimer=null;
+function onStudentCodeChange(boxes){
+  const code = boxes.map(b=>b.value).join('');
+  state.studentCode = code;
+  const resultZone = document.getElementById('student-result');
+  const confirmZone = document.getElementById('student-confirm-zone');
+  const stateZone = document.getElementById('student-check-state');
+  state.studentLookup = null;
+  if(resultZone) resultZone.innerHTML=''; if(confirmZone) confirmZone.innerHTML='';
+  if(studentLookupTimer) clearTimeout(studentLookupTimer);
+  if(code.length < 5){ if(stateZone) stateZone.textContent=''; return; }
+  if(stateZone) stateZone.textContent = 'กำลังตรวจสอบ...';
+  studentLookupTimer = setTimeout(()=>lookupStudentCode(code), 200);
+}
+async function lookupStudentCode(code){
+  if(code !== state.studentCode) return; // โค้ดเปลี่ยนไปแล้วระหว่างรอ
+  const stateZone = document.getElementById('student-check-state');
+  const resultZone = document.getElementById('student-result');
+  const confirmZone = document.getElementById('student-confirm-zone');
+  const { data, error } = await sb.from('students').select('*').eq('student_id', code).maybeSingle();
+  if(code !== state.studentCode) return; // กันผลลัพธ์เก่ามาทับของใหม่
+  if(stateZone) stateZone.textContent='';
+  if(error || !data){
+    if(resultZone) resultZone.innerHTML = `<div class="student-notfound-card">❌ ไม่พบรหัสประจำตัวนี้ กรุณาตรวจสอบรหัสอีกครั้ง</div>`;
+    state.studentLookup=null;
+    return;
+  }
+  state.studentLookup = data;
+  if(resultZone) resultZone.innerHTML = `<div class="student-found-card">
+      <div class="row"><span>✓ พบข้อมูลนักเรียน</span><span></span></div>
+      <div class="row"><span>ชื่อ</span><b>${escapeHtml(data.student_name)}</b></div>
+      <div class="row"><span>ห้อง</span><b>${escapeHtml(data.class_room)}</b></div>
+      <div class="row"><span>รหัสประจำตัว</span><b>${escapeHtml(code)}</b></div>
+    </div>`;
+  if(confirmZone) confirmZone.innerHTML = `<button class="btn btn-primary" data-action="confirm-student-register">ยืนยันข้อมูล</button>`;
+}
+async function confirmStudentRegister(){
+  if(!state.studentLookup) return;
+  try{
+    const profile = await callRpc('register_student', { p_student_id: state.studentLookup.student_id });
+    onLoginSuccess(profile);
+  }catch(e){ /* errMsg already toasted by callRpc */ }
+}
+
+/* ---------- admin auth (ไม่เปลี่ยนพฤติกรรมเดิม) ---------- */
+function tplAuthForm(){
+  const role = state.pendingRole;
+  return `<div class="section">
+    <button class="btn btn-outline btn-sm" data-action="back-to-roles" style="margin-bottom:14px;">‹ กลับ</button>
+    <div class="glass-card">
+      <h2 style="margin:0 0 4px;font-size:18px;">${roleLabel(role)}</h2>
+      <p style="margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;">กรอกข้อมูลเพื่อเข้าใช้งาน</p>
+      <div class="tab-switch">
+        <button class="${state.authTab==='register'?'active':''}" data-action="auth-tab" data-tab="register">ลงทะเบียนใหม่</button>
+        <button class="${state.authTab==='login'?'active':''}" data-action="auth-tab" data-tab="login">เคยลงทะเบียนแล้ว</button>
+      </div>
+      ${state.authTab==='register' ? tplRegisterForm(role) : tplLoginForm(role)}
+    </div></div>`;
+}
+function tplRegisterForm(role){
+  const kind = state.registerAdminKind || 'teacher';
+  return `<form data-form="register" data-role="admin">
+    <div class="form-field"><label>ประเภทผู้ดูแลระบบ</label>
+      <div class="tab-switch">
+        <button type="button" data-action="set-admin-kind" data-kind="teacher" class="${kind==='teacher'?'active':''}">ครู</button>
+        <button type="button" data-action="set-admin-kind" data-kind="developer" class="${kind==='developer'?'active':''}">ผู้พัฒนา</button>
+      </div>
+    </div>
+    <div class="form-field" style="position:relative;">
+      <label>ชื่อ-นามสกุล${kind==='teacher'?' (พิมพ์เพื่อค้นหารายชื่อครู)':''}</label>
+      <input name="name" id="admin-name-input" autocomplete="off" required>
+      <div id="name-suggestions" style="position:absolute;z-index:10;background:var(--card-bg);width:100%;border-radius:12px;box-shadow:var(--shadow-tight);max-height:160px;overflow:auto;display:none;"></div>
+    </div>
+    <div class="form-field"><label>ช่องทางการติดต่อ (เช่น Line ID / เบอร์โทร)</label><input name="contact" required></div>
+    <div class="form-field"><label>รหัสลับผู้ดูแลระบบ</label><input name="code" type="password" required></div>
+    ${kind==='teacher' ? `<div class="form-field"><label>กลุ่มที่ดูแล</label>
+      <div id="manage-category-inputs"></div>
+      <button type="button" class="picker-trigger" data-action="open-manager-picker"><span id="manage-picker-summary" class="picker-value">ยังไม่ได้เลือกกลุ่ม</span><span class="picker-arrow">›</span></button>
+    </div>` : ''}
+    <input type="hidden" name="admin_kind" value="${kind}">
+    <div id="auth-err" class="err-text hidden"></div>
+    <button class="btn btn-primary" type="submit">เข้าสู่ระบบ</button>
+  </form>`;
+}
+function tplLoginForm(role){
+  return `<form data-form="login" data-role="admin">
+    <div class="form-field"><label>ชื่อ-นามสกุล</label><input name="name" required></div>
+    <div class="form-field"><label>รหัสลับผู้ดูแลระบบ</label><input name="code" type="password" required></div>
+    <div id="auth-err" class="err-text hidden"></div>
+    <button class="btn btn-primary" type="submit">เข้าสู่ระบบ</button>
+  </form>`;
+}
+async function handleRegisterSubmit(form){
+  const fd = new FormData(form); const errBox = form.querySelector('#auth-err');
+  errBox.classList.add('hidden');
+  try{
+    const payload = {
+      p_role: 'admin',
+      p_name: (fd.get('name') || '').trim(),
+      p_contact: (fd.get('contact') || '').trim(),
+      p_admin_type: fd.get('admin_kind'),
+      p_subject: fd.get('subject'),
+      p_code: fd.get('code'),
+      p_manage_resource_ids: await categoryIdsToResourceIds(fd.getAll('manage_cat')),
+    };
+    const profile = await callRpc('register_profile', payload);
+    onLoginSuccess(profile);
+  }catch(e){ errBox.textContent = errMsg(e.message); errBox.classList.remove('hidden'); }
+}
+async function handleLoginSubmit(form){
+  const fd = new FormData(form); const errBox = form.querySelector('#auth-err');
+  errBox.classList.add('hidden');
+  const name=(fd.get('name')||'').trim();
+  const code = fd.get('code');
+  try{
+    const profile = await callRpc('login_profile', {p_role:'admin', p_name:name, p_code:code});
+    onLoginSuccess(profile);
+  }catch(e){ errBox.textContent = errMsg(e.message); errBox.classList.remove('hidden'); }
+}
+function onLoginSuccess(profile){
+  state.profile = profile; state.view='booking'; state.crumbs=[]; state.cache.myManagedIds=[];
+  showToast('เข้าสู่ระบบสำเร็จ ยินดีต้อนรับคุณ '+profile.name, 'ok');
+  subscribeRealtime(); loadNotifCount(); render();
+  if(profile.role === 'admin'){
+    sb.from('resource_managers').select('resource_id').eq('manager_id',profile.id).then(({data})=>{
+      state.cache.myManagedIds = (data||[]).map(m=>m.resource_id);
+    });
+  }
+}
+
+/* ---------- booking home / category browse / resource detail ---------- */
+async function renderBookingHome(){
+  viewEl.innerHTML = `<div class="section" style="padding-bottom:4px;"><div class="section-title"><h2>เลือกหมวดที่ต้องการจอง</h2></div></div>
+    <div class="mega-grid" id="mega-grid"><div class="skeleton" style="height:86px;"></div><div class="skeleton" style="height:86px;"></div></div>`;
+  const cats = await fetchTopCategories();
+  const icon={place:'🏫',room:'🏢',equipment:'📦'}, sub={place:'อาคาร สนาม และพื้นที่ต่าง ๆ',room:'ห้องเรียนทุกระดับชั้น',equipment:'เครื่องดนตรี กีฬา และของยืม'}, cls={place:'t1',room:'t2',equipment:'t3'};
+  const grid = document.getElementById('mega-grid');
+  if(grid) grid.innerHTML = cats.map(c=>`<button class="mega-tile ${cls[c.type]||'t1'}" data-action="open-category" data-id="${c.id}" data-name="${escapeHtml(c.name)}">
+      <span class="ic">${icon[c.type]||'📦'}</span><span class="txt"><strong>${escapeHtml(c.name)}</strong><span>${sub[c.type]||''}</span></span></button>`).join('');
+}
+async function openCategory(id, name){ state.crumbs.push({id,name}); state.currentCategoryId=id; state.view='categoryBrowse'; render(); }
+function tplCrumbs(){
+  return `<div class="crumb"><b data-action="crumb-home">หน้าแรก</b>${state.crumbs.map((c,i)=>`<span>›</span><b data-action="crumb-jump" data-index="${i}">${escapeHtml(c.name)}</b>`).join('')}</div>`;
+}
+async function renderCategoryBrowse(){
+  const catId = state.currentCategoryId;
+  viewEl.innerHTML = tplCrumbs() + `<div id="browse-body"><div class="skeleton" style="height:200px;margin:0 18px;"></div></div>`;
+  const [subcats, resources] = await Promise.all([fetchSubcategories(catId), fetchResourcesWithStatus(catId)]);
+  const bodyEl = document.getElementById('browse-body');
+  if(!bodyEl) return;
+  if(!subcats.length && !resources.length){ bodyEl.innerHTML = `<div class="empty-state"><span class="ic">📭</span>ยังไม่มีรายการในหมวดนี้</div>`; return; }
+  let htmlOut='';
+  if(subcats.length){
+    htmlOut += `<div class="tile-grid">${subcats.map(c=>`<button class="subcat-tile" data-action="open-category" data-id="${c.id}" data-name="${escapeHtml(c.name)}">
+      <span class="ic">${c.icon||'📁'}</span><span class="lbl">${escapeHtml(c.name)}</span></button>`).join('')}</div>`;
+  }
+  if(resources.length){
+    htmlOut += resources.map(r=>`<div class="res-card" data-action="open-resource" data-id="${r.id}">
+        <div class="thumb">${thumbHtml(r)}</div>
+        <div class="info"><div class="nm">${escapeHtml(r.name)}</div><div class="qty">ทั้งหมด ${r.total_qty} ${escapeHtml(r.unit)}</div></div>
+        <span class="status-pill ${r.status.cls}">${r.status.label}</span></div>`).join('');
+  }
+  bodyEl.innerHTML = htmlOut;
+}
+async function openResource(id){ state.currentResourceId=id; state.view='resourceDetail'; render(); }
+async function renderResourceDetail(){
+  const id = state.currentResourceId;
+  viewEl.innerHTML = tplCrumbs() + `<div class="skeleton" style="height:150px;margin:0 18px 14px;border-radius:28px;"></div>`;
+  const r = await fetchResource(id);
+  if(!r){ viewEl.innerHTML = `<div class="empty-state"><span class="ic">❓</span>ไม่พบรายการ</div>`; return; }
+  const reserved = await callRpc('qty_reserved',{p_resource_id:id,p_date:todayStr(),p_start:'00:00',p_end:'23:59'},{silent:true}).catch(()=>0);
+  const remaining = r.total_qty - reserved; const status = statusInfo(remaining, r.total_qty);
+  const { data: todayBookings } = await sb.from('bookings').select('*, profiles!user_id(name)').eq('resource_id',id).eq('booking_date',todayStr()).not('status','in','(cancelled,rejected)').order('start_time');
+  const { data: managers } = await sb.from('resource_managers').select('manager_id, profiles(name, admin_type)').eq('resource_id', id);
+  const canEdit = state.profile && (state.profile.role==='admin' || (state.cache.myManagedIds||[]).includes(r.id));
+  viewEl.innerHTML = tplCrumbs() + `
+    <div class="detail-hero" style="${r.image_url?'padding:0;overflow:hidden;':''}">${r.image_url?`<img src="${escapeHtml(r.image_url)}" alt="" style="width:100%;height:100%;object-fit:cover;">`:resourceEmoji(r.name)}</div>
+    <div class="section" style="padding-top:0;">
+      <div class="section-title"><h2>${escapeHtml(r.name)}</h2><span class="status-pill ${status.cls}">${status.label}</span></div>
+      ${canEdit ? `<button class="btn btn-outline btn-sm" data-action="edit-managed-resource" data-id="${r.id}" style="margin-bottom:10px;">✏️ แก้ไขชื่อ/รูปภาพ</button>` : ''}
+      <p style="margin:0 0 6px;color:var(--ink-soft);font-size:13px;">${escapeHtml(r.description||'ไม่มีคำอธิบายเพิ่มเติม')}</p>
+      ${managers && managers.length ? `<p style="margin:0 0 12px;color:var(--ink-faint);font-size:12px;">👤 ครูผู้ดูแล: ${managers.map(m=>escapeHtml(m.profiles?.name||'-')).join(', ')}</p>` : ''}
+    </div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="n">${r.total_qty}</div><div class="l">ทั้งหมด (${escapeHtml(r.unit)})</div></div>
+      <div class="stat-box"><div class="n">${Math.max(remaining,0)}</div><div class="l">คงเหลือวันนี้</div></div>
+      <div class="stat-box"><div class="n">${r.auto_approve?'เปิด':'ปิด'}</div><div class="l">Auto Approve</div></div>
+    </div>
+    <div class="section" style="padding-top:0;"><div class="solid-card">
+      <h3 style="margin:0 0 8px;font-size:13.5px;">คิวการจองวันนี้</h3>
+      ${todayBookings && todayBookings.length ? todayBookings.map(b=>`<div class="slot-row"><span>${fmtTime(b.start_time)}-${fmtTime(b.end_time)} · ${escapeHtml(b.profiles?.name||'-')}</span><span class="status-pill ${b.status==='approved'?'status-green':'status-amber'}">${bookingStatusLabel(b.status)}</span></div>`).join('') : `<div style="font-size:12.5px;color:var(--ink-faint);">ยังไม่มีการจองวันนี้</div>`}
+    </div></div>
+    <div class="section" style="padding-top:0;"><button class="btn btn-primary" data-action="open-book-form" data-id="${r.id}">จองรายการนี้</button></div>`;
+}
+async function openBookForm(resourceId){
+  const r = await fetchResource(resourceId);
+  const zone = document.getElementById('modal-zone');
+  zone.innerHTML = `<div class="modal-back" data-modal-back><div class="modal-sheet">
+    <h3>จอง: ${escapeHtml(r.name)}</h3><p>เวลาให้บริการ 06:00 - 16:30 น.</p>
+    <form data-form="book">
+      <div class="form-field"><label>วันที่</label><input type="date" name="date" min="${todayStr()}" value="${todayStr()}" required></div>
+      <div class="row-2">
+        <div class="form-field"><label>เวลาเริ่ม</label><input type="time" name="start" min="06:00" max="16:30" required></div>
+        <div class="form-field"><label>เวลาสิ้นสุด</label><input type="time" name="end" min="06:00" max="16:30" required></div>
+      </div>
+      <div class="form-field"><label>จำนวน (สูงสุด ${r.total_qty} ${escapeHtml(r.unit)})</label><input type="number" name="qty" min="1" max="${r.total_qty}" value="1" required></div>
+      <div class="form-field"><label>กิจกรรม (ถ้าไม่กรอกจะแสดง "-")</label><input name="purpose" placeholder="เช่น ซ้อมดนตรี"></div>
+      <div id="book-err" class="err-text hidden"></div>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-modal-cancel>ยกเลิก</button><button type="submit" class="btn btn-primary">ส่งคำขอจอง</button></div>
+    </form></div></div>`;
+  zone.querySelector('[data-modal-cancel]').onclick = ()=> zone.innerHTML='';
+  zone.querySelector('[data-modal-back]').onclick = (e)=>{ if(e.target===e.currentTarget) zone.innerHTML=''; };
+  zone.querySelector('[data-form="book"]').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target); const errBox = document.getElementById('book-err');
+    try{
+      await callRpc('create_booking', { p_resource_id:resourceId, p_user_id:state.profile.id, p_date:fd.get('date'), p_start:fd.get('start'), p_end:fd.get('end'), p_qty:Number(fd.get('qty')), p_purpose:fd.get('purpose')||'-' });
+      zone.innerHTML=''; showToast('ส่งคำขอจองสำเร็จ','ok'); render();
+    }catch(err){ errBox.textContent = errMsg(err.message); errBox.classList.remove('hidden'); }
+  });
+}
+
+/* ---------- my bookings ---------- */
+async function renderMyBookings(){
+  viewEl.innerHTML = `<div class="section"><div class="section-title"><h2>ของที่จอง</h2></div></div><div id="mybk-body"><div class="skeleton" style="height:100px;margin:0 18px;"></div></div>`;
+  const { data, error } = await sb.from('bookings').select('*, resources(name,unit)').eq('user_id', state.profile.id).order('created_at',{ascending:false});
+  const bodyEl = document.getElementById('mybk-body'); if(!bodyEl) return;
+  if(error || !data || !data.length){ bodyEl.innerHTML = `<div class="empty-state"><span class="ic">🗂️</span>ยังไม่มีรายการจอง</div>`; return; }
+  bodyEl.innerHTML = data.map(b=>`<div class="book-card">
+      <div class="top"><span class="nm">${escapeHtml(b.resources?.name||'-')}</span><span class="status-pill ${bookingPillCls(b.status)}">${bookingStatusLabel(b.status)}</span></div>
+      <div class="meta"><span>📅 ${fmtDate(b.booking_date)}</span><span>🕐 ${fmtTime(b.start_time)}-${fmtTime(b.end_time)}</span><span>🔢 ${b.quantity} ${escapeHtml(b.resources?.unit||'')}</span></div>
+      ${b.purpose && b.purpose!=='-' ? `<div class="meta">🎯 ${escapeHtml(b.purpose)}</div>` : ''}
+      ${['pending','approved'].includes(b.status) ? `<div class="actions"><button class="btn btn-danger btn-sm" data-action="cancel-booking" data-id="${b.id}">ยกเลิกการจอง</button></div>` : ''}
+    </div>`).join('');
+}
+async function cancelBooking(id){
+  const ok = await confirmModal({title:'ยกเลิกการจอง', desc:'ยืนยันการยกเลิกรายการนี้หรือไม่?', okLabel:'ยกเลิกรายการ', danger:true});
+  if(!ok) return;
+  try{ await callRpc('cancel_booking', {p_booking_id:id, p_requester_id: state.profile.id}); showToast('ยกเลิกการจองแล้ว','ok'); render(); }catch(e){}
+}
+
+/* ---------- approvals ---------- */
+async function renderApprovals(){
+  viewEl.innerHTML = `<div class="section"><div class="section-title"><h2>การอนุมัติ</h2></div></div>
+    <div class="chip-row">
+      <button class="chip ${state.apprFilter==='all'?'active':''}" data-action="appr-filter" data-f="all">ทั้งหมด</button>
+      <button class="chip ${state.apprFilter==='mine'?'active':''}" data-action="appr-filter" data-f="mine">เฉพาะที่ดูแล</button>
+    </div>
+    <div id="my-managed-zone"></div>
+    <div id="appr-body"><div class="skeleton" style="height:100px;margin:0 18px;"></div></div>`;
+  const { data: managed } = await sb.from('resource_managers').select('resource_id').eq('manager_id', state.profile.id);
+  const managedIds = (managed||[]).map(m=>m.resource_id);
+  if(managedIds.length){
+    const { data: managedResources } = await sb.from('resources').select('*').in('id', managedIds);
+    const withStatus = await Promise.all((managedResources||[]).map(async r=>{
+      const reserved = await callRpc('qty_reserved',{p_resource_id:r.id,p_date:todayStr(),p_start:'00:00',p_end:'23:59'},{silent:true}).catch(()=>0);
+      r.remaining = Math.max(r.total_qty - reserved, 0);
+      return r;
+    }));
+    const mgrZone = document.getElementById('my-managed-zone');
+    if(mgrZone) mgrZone.innerHTML = `<div class="section" style="padding-top:0;"><div class="solid-card">
+      <h3 style="margin:0 0 10px;font-size:13.5px;">รายการที่ฉันดูแล</h3>
+      ${withStatus.map(r=>`<div class="res-card" style="margin:0 0 8px;">
+        <div class="thumb">${thumbHtml(r)}</div>
+        <div class="info"><div class="nm">${escapeHtml(r.name)}</div><div class="qty">เหลือ ${r.remaining}/${r.total_qty} ${escapeHtml(r.unit)}</div></div>
+        <button class="btn btn-outline btn-sm" data-action="edit-managed-resource" data-id="${r.id}">แก้ไข</button>
+      </div>`).join('')}
+    </div></div>`;
+  }
+  let query = sb.from('bookings').select('*, resources(name,unit,auto_approve,auto_reject), profiles!user_id(name,role)').order('created_at',{ascending:false});
+  if(state.apprFilter==='mine'){
+    const bodyEl0 = document.getElementById('appr-body');
+    if(!managedIds.length){ if(bodyEl0) bodyEl0.innerHTML = `<div class="empty-state"><span class="ic">🗂️</span>ยังไม่มีรายการที่คุณดูแล</div>`; return; }
+    query = query.in('resource_id', managedIds);
+  }
+  const { data, error } = await query;
+  const bodyEl = document.getElementById('appr-body'); if(!bodyEl) return;
+  if(error || !data || !data.length){ bodyEl.innerHTML = `<div class="empty-state"><span class="ic">✅</span>ยังไม่มีคำขอ</div>`; return; }
+  bodyEl.innerHTML = data.map(b=>`<div class="book-card">
+      <div class="top"><span class="nm">${escapeHtml(b.resources?.name||'-')}</span><span class="status-pill ${bookingPillCls(b.status)}">${bookingStatusLabel(b.status)}</span></div>
+      <div class="meta"><span>👤 ${escapeHtml(b.profiles?.name||'-')} (${roleLabel(b.profiles?.role)})</span></div>
+      <div class="meta"><span>📅 ${fmtDate(b.booking_date)}</span><span>🕐 ${fmtTime(b.start_time)}-${fmtTime(b.end_time)}</span><span>🔢 ${b.quantity}</span></div>
+      ${b.status==='pending' ? `<div class="actions">
+        <button class="btn btn-primary btn-sm" data-action="set-status" data-id="${b.id}" data-status="approved">อนุมัติ</button>
+        <button class="btn btn-danger btn-sm" data-action="set-status" data-id="${b.id}" data-status="rejected">ไม่อนุมัติ</button></div>` : ''}
+      ${b.status==='approved' ? `<div class="actions"><button class="btn btn-outline btn-sm" data-action="set-status" data-id="${b.id}" data-status="withdrawn">ถอนผู้ยืม</button></div>` : ''}
+      <div class="actions" style="margin-top:8px;"><button class="btn btn-ghost btn-sm" data-action="toggle-auto" data-id="${b.resource_id}" data-field="auto_approve" data-val="${!b.resources?.auto_approve}">Auto Approve: ${b.resources?.auto_approve?'เปิด':'ปิด'}</button></div>
+    </div>`).join('');
+}
+async function setBookingStatus(id, status){
+  const labels = {approved:'อนุมัติ',rejected:'ไม่อนุมัติ',withdrawn:'ถอนผู้ยืม'};
+  const ok = await confirmModal({title: labels[status]+'รายการนี้?', desc:'การกระทำนี้จะแจ้งเตือนไปยังผู้จองทันที'});
+  if(!ok) return;
+  try{ await callRpc('set_booking_status', {p_booking_id:id, p_actor_id: state.profile.id, p_status: status}); showToast('บันทึกแล้ว','ok'); render(); }catch(e){}
+}
+async function toggleAuto(resourceId, field, val){
+  try{
+    const r = await fetchResource(resourceId);
+    await callRpc('set_resource_automation', { p_actor_id: state.profile.id, p_resource_id: resourceId,
+      p_auto_approve: field==='auto_approve'? val : r.auto_approve, p_auto_reject: field==='auto_reject'? val : r.auto_reject });
+    showToast('อัปเดตการตั้งค่าแล้ว','ok'); render();
+  }catch(e){}
+}
+
+/* ---------- admin dashboard ---------- */
+function dashTabLabel(t){ return {overview:'ภาพรวม',history:'ประวัติ',manage:'จัดการ',users:'ผู้ใช้งาน'}[t]; }
+async function renderDashboard(){
+  viewEl.innerHTML = `<div class="section"><div class="section-title"><h2>Dashboard</h2></div></div>
+    <div class="chip-row">${['overview','history','manage','users'].map(t=>`<button class="chip ${state.dashboardTab===t?'active':''}" data-action="dash-tab" data-t="${t}">${dashTabLabel(t)}</button>`).join('')}</div>
+    <div id="dash-body"><div class="skeleton" style="height:200px;margin:0 18px;"></div></div>`;
+  if(state.dashboardTab==='overview') await renderDashOverview();
+  else if(state.dashboardTab==='history') await renderDashHistory();
+  else if(state.dashboardTab==='manage') await renderDashManage();
+  else if(state.dashboardTab==='users') await renderDashUsers();
+}
+async function renderDashOverview(){
+  const { data: all } = await sb.from('bookings').select('status,booking_date,resource_id,resources(name)');
+  const bodyEl = document.getElementById('dash-body'); if(!bodyEl) return;
+  if(!all){ bodyEl.innerHTML = `<div class="empty-state">โหลดข้อมูลไม่สำเร็จ</div>`; return; }
+  const today = todayStr(); const counts = {pending:0,approved:0,rejected:0,today:0}; const byDay={}; const byResource={};
+  all.forEach(b=>{
+    if(counts[b.status]!==undefined) counts[b.status]++;
+    if(b.booking_date===today) counts.today++;
+    byDay[b.booking_date] = (byDay[b.booking_date]||0)+1;
+    const nm = b.resources?.name || '-'; byResource[nm] = (byResource[nm]||0)+1;
+  });
+  const last14 = [...Array(14)].map((_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(13-i)); return d.toISOString().slice(0,10); });
+  const topResources = Object.entries(byResource).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  bodyEl.innerHTML = `<div class="kpi-grid">
+      <div class="kpi-card"><div class="n">${counts.today}</div><div class="l">การจองวันนี้</div></div>
+      <div class="kpi-card"><div class="n">${counts.pending}</div><div class="l">รออนุมัติ</div></div>
+      <div class="kpi-card"><div class="n">${counts.approved}</div><div class="l">อนุมัติแล้ว</div></div>
+      <div class="kpi-card"><div class="n">${counts.rejected}</div><div class="l">ไม่อนุมัติ</div></div></div>
+    <div class="chart-card"><h3>แนวโน้มการจอง 14 วันล่าสุด</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+    <div class="chart-card"><h3>สถานะคำขอทั้งหมด</h3><div class="chart-wrap"><canvas id="chartStatus"></canvas></div></div>
+    <div class="chart-card"><h3>รายการยอดนิยม Top 5</h3><div class="chart-wrap"><canvas id="chartTop"></canvas></div></div>`;
+  new Chart(document.getElementById('chartTrend'), { type:'line',
+    data:{ labels:last14.map(d=>d.slice(5)), datasets:[{ label:'จำนวนการจอง', data:last14.map(d=>byDay[d]||0), borderColor:'#7C3AED', backgroundColor:'rgba(124,58,237,0.15)', fill:true, tension:.35 }]},
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}}} } });
+  new Chart(document.getElementById('chartStatus'), { type:'doughnut',
+    data:{ labels:['รออนุมัติ','อนุมัติแล้ว','ไม่อนุมัติ'], datasets:[{ data:[counts.pending,counts.approved,counts.rejected], backgroundColor:['#D97706','#16A34A','#DC2626']}]},
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}}} } });
+  new Chart(document.getElementById('chartTop'), { type:'bar',
+    data:{ labels:topResources.map(r=>r[0]), datasets:[{ label:'จำนวนครั้ง', data:topResources.map(r=>r[1]), backgroundColor:'#8B5CF6', borderRadius:6 }]},
+    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,ticks:{precision:0}}} } });
+}
+async function renderDashHistory(){
+  const bodyEl = document.getElementById('dash-body'); if(!bodyEl) return;
+  bodyEl.innerHTML = `<div class="search-bar"><input id="hist-search" placeholder="ค้นหาชื่อ/ห้อง/กิจกรรม..."></div>
+    <div class="section" style="padding-top:0;"><button class="btn btn-outline" data-action="export-history">ส่งออก CSV</button></div>
+    <div class="section" style="padding-top:0;overflow-x:auto;"><table class="hist" id="hist-table"></table></div>`;
+  const { data } = await sb.from('bookings').select('*, resources(name), profiles!user_id(name)').order('created_at',{ascending:false}).limit(300);
+  state.cache.historyRows = data || [];
+  renderHistTable(state.cache.historyRows);
+  document.getElementById('hist-search').addEventListener('input', (e)=>{
+    const q = e.target.value.trim().toLowerCase();
+    renderHistTable(state.cache.historyRows.filter(b => (b.profiles?.name||'').toLowerCase().includes(q) || (b.resources?.name||'').toLowerCase().includes(q) || (b.purpose||'').toLowerCase().includes(q)));
+  });
+}
+function renderHistTable(rows){
+  const tbl = document.getElementById('hist-table'); if(!tbl) return;
+  tbl.innerHTML = `<tr><th>ผู้จอง</th><th>รายการ</th><th>วันที่</th><th>เวลา</th><th>สถานะ</th></tr>` +
+    rows.map(b=>`<tr><td>${escapeHtml(b.profiles?.name||'-')}</td><td>${escapeHtml(b.resources?.name||'-')}</td><td>${fmtDate(b.booking_date)}</td><td>${fmtTime(b.start_time)}-${fmtTime(b.end_time)}</td><td>${bookingStatusLabel(b.status)}</td></tr>`).join('');
+}
+function exportHistory(){
+  const rows = (state.cache.historyRows||[]).map(b=>({ 'ผู้จอง':b.profiles?.name||'-', 'รายการ':b.resources?.name||'-', 'วันที่':b.booking_date, 'เวลาเริ่ม':fmtTime(b.start_time), 'เวลาสิ้นสุด':fmtTime(b.end_time), 'จำนวน':b.quantity, 'กิจกรรม':b.purpose, 'สถานะ':bookingStatusLabel(b.status) }));
+  exportCsv('ประวัติการจอง.csv', rows);
+}
+async function renderDashManage(){
+  const bodyEl = document.getElementById('dash-body'); if(!bodyEl) return;
+  const cats = await fetchAllCategoriesFlat(); state.cache.allCategoriesFlat = cats;
+  const opts = cats.map(c=>`<option value="${c.id}">${'—'.repeat(c.depth)} ${escapeHtml(c.name)}</option>`).join('');
+  bodyEl.innerHTML = `<div class="section" style="padding-top:0;"><div class="solid-card">
+      <h3 style="margin:0 0 10px;font-size:14px;">เพิ่มหมวดหมู่ย่อย</h3>
+      <form data-form="add-category">
+        <div class="form-field"><label>อยู่ภายใต้หมวด</label><select name="parent_id" required>${opts}</select></div>
+        <div class="form-field"><label>ชื่อหมวดหมู่ย่อย</label><input name="name" required></div>
+        <button class="btn btn-outline" type="submit">เพิ่มหมวดหมู่</button>
+      </form></div></div>
+    <div class="section"><div class="solid-card">
+      <h3 style="margin:0 0 10px;font-size:14px;">เพิ่มรายการที่จองได้</h3>
+      <form data-form="add-resource">
+        <div class="form-field"><label>อยู่ในหมวด</label><select name="category_id" required>${opts}</select></div>
+        <div class="form-field"><label>ชื่อรายการ</label><input name="name" required></div>
+        <div class="row-2">
+          <div class="form-field"><label>จำนวนทั้งหมด</label><input name="total_qty" type="number" min="1" value="1" required></div>
+          <div class="form-field"><label>หน่วยนับ</label><input name="unit" value="ชิ้น" required></div>
+        </div>
+        <div class="form-field"><label>รายละเอียด</label><textarea name="description" rows="2"></textarea></div>
+        <div class="form-field"><label>รูปภาพ (ถ้ามี)</label><input type="file" name="image" accept="image/*"></div>
+        <button class="btn btn-primary" type="submit">เพิ่มรายการ</button>
+      </form></div></div>
+    <div class="section"><div class="section-title"><h2>รายการทั้งหมด</h2></div></div>
+    <div id="manage-list"><div class="skeleton" style="height:100px;margin:0 18px;"></div></div>`;
+  const { data: resources } = await sb.from('resources').select('*, categories(name)').order('created_at',{ascending:false});
+  document.getElementById('manage-list').innerHTML = (resources||[]).map(r=>`<div class="res-card">
+      <div class="thumb">${thumbHtml(r)}</div>
+      <div class="info"><div class="nm">${escapeHtml(r.name)}${r.is_active?'':' <span style=\"color:var(--red);font-weight:400;\">(ปิดใช้งาน)</span>'}</div><div class="qty">${escapeHtml(r.categories?.name||'')} · ${r.total_qty} ${escapeHtml(r.unit)}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button class="btn btn-outline btn-sm" data-action="edit-resource" data-id="${r.id}">แก้ไข</button>
+        <button class="btn btn-danger btn-sm" data-action="delete-resource" data-id="${r.id}">ลบ</button>
+      </div></div>`).join('') || `<div class="empty-state">ยังไม่มีรายการ</div>`;
+}
+async function addCategory(form){
+  const fd = new FormData(form);
+  const parent = (state.cache.allCategoriesFlat||[]).find(c=>c.id===fd.get('parent_id'));
+  try{
+    await callRpc('admin_upsert_category', { p_admin_id: state.profile.id, p_id:null, p_parent_id: fd.get('parent_id'), p_type: parent?.type||'equipment', p_name: fd.get('name'), p_icon:'📁', p_sort_order:99 });
+    showToast('เพิ่มหมวดหมู่แล้ว','ok'); render();
+  }catch(e){}
+}
+async function addResource(form){
+  const fd = new FormData(form);
+  const file = fd.get('image');
+  let imageUrl = null;
+  if(file && file.size>0) imageUrl = await uploadResourceImage(file);
+  try{
+    await callRpc('admin_upsert_resource', { p_admin_id: state.profile.id, p_id:null, p_category_id: fd.get('category_id'), p_name: fd.get('name'), p_description: fd.get('description')||'', p_image_url:imageUrl, p_total_qty: Number(fd.get('total_qty')), p_unit: fd.get('unit'), p_auto_approve:false, p_auto_reject:false });
+    showToast('เพิ่มรายการแล้ว','ok'); render();
+  }catch(e){}
+}
+async function deleteResource(id){
+  const ok = await confirmModal({title:'ลบรายการนี้?', desc:'ประวัติการจองเก่าของรายการนี้จะถูกลบไปด้วย', okLabel:'ลบ', danger:true});
+  if(!ok) return;
+  try{ await callRpc('admin_delete_resource', {p_admin_id: state.profile.id, p_resource_id:id}); showToast('ลบแล้ว','ok'); render(); }catch(e){}
+}
+function readFileAsDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadResourceImage(file){
+  if(!file) return null;
+  if(DEMO_MODE){
+    try{ return await readFileAsDataUrl(file); }catch(e){ showToast('อ่านไฟล์รูปไม่สำเร็จ','err'); return null; }
+  }
+  try{
+    const ext = (file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+    const path = `resources/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await sb.storage.from('resource-images').upload(path, file, { upsert:true });
+    if(error){ showToast('อัปโหลดรูปไม่สำเร็จ: '+error.message,'err'); return null; }
+    const { data } = sb.storage.from('resource-images').getPublicUrl(path);
+    return data?.publicUrl || null;
+  }catch(e){ showToast('อัปโหลดรูปไม่สำเร็จ','err'); return null; }
+}
+async function openEditResourceModal(resourceId, isAdmin){
+  const r = await fetchResource(resourceId);
+  if(!r){ showToast('ไม่พบรายการนี้','err'); return; }
+  const zone = document.getElementById('modal-zone');
+  zone.innerHTML = `<div class="modal-back" data-modal-back><div class="modal-sheet">
+    <h3>แก้ไขรายการ</h3>
+    ${r.image_url ? `<img src="${escapeHtml(r.image_url)}" style="width:100%;max-height:150px;object-fit:cover;border-radius:16px;margin-bottom:12px;">` : ''}
+    <form data-form="edit-resource">
+      <div class="form-field"><label>ชื่อรายการ</label><input name="name" value="${escapeHtml(r.name)}" required></div>
+      <div class="form-field"><label>รายละเอียด</label><textarea name="description" rows="2">${escapeHtml(r.description||'')}</textarea></div>
+      <div class="form-field"><label>เปลี่ยนรูปภาพ</label><input type="file" name="image" accept="image/*"></div>
+      <div id="edit-res-err" class="err-text hidden"></div>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-modal-cancel>ยกเลิก</button><button type="submit" class="btn btn-primary">บันทึก</button></div>
+    </form></div></div>`;
+  zone.querySelector('[data-modal-cancel]').onclick = ()=> zone.innerHTML='';
+  zone.querySelector('[data-modal-back]').onclick = (e)=>{ if(e.target===e.currentTarget) zone.innerHTML=''; };
+  zone.querySelector('[data-form="edit-resource"]').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const file = fd.get('image');
+    let imageUrl = r.image_url;
+    if(file && file.size>0){ const uploaded = await uploadResourceImage(file); if(uploaded) imageUrl = uploaded; }
+    const errBox = document.getElementById('edit-res-err');
+    try{
+      if(isAdmin){
+        await callRpc('admin_upsert_resource', { p_admin_id: state.profile.id, p_id:r.id, p_category_id:r.category_id, p_name: fd.get('name'), p_description: fd.get('description')||'', p_image_url:imageUrl, p_total_qty:r.total_qty, p_unit:r.unit, p_auto_approve:r.auto_approve, p_auto_reject:r.auto_reject });
+      } else {
+        await callRpc('manager_update_resource_display', { p_actor_id: state.profile.id, p_resource_id:r.id, p_name: fd.get('name'), p_image_url:imageUrl, p_description: fd.get('description')||'' });
+      }
+      zone.innerHTML=''; showToast('บันทึกการแก้ไขแล้ว','ok'); render();
+    }catch(err){ errBox.textContent = errMsg(err.message); errBox.classList.remove('hidden'); }
+  });
+}
+async function renderDashUsers(){
+  const bodyEl = document.getElementById('dash-body'); if(!bodyEl) return;
+  const { data } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  bodyEl.innerHTML = `<div class="section" style="padding-top:0;">` + (data||[]).map(p=>`<div class="res-card">
+      <div class="thumb">${p.role==='student'?'🧑‍🎓':(p.admin_type==='teacher'?'🧑‍🏫':'🛡️')}</div>
+      <div class="info"><div class="nm">${escapeHtml(p.name)}</div><div class="qty">${roleLabel(p.role)}${p.admin_type?' · '+(p.admin_type==='teacher'?'ครู':'ผู้พัฒนา'):''}${p.grade?' · ม.'+p.grade+'/'+p.class_room:''}${p.student_id?' · รหัส '+escapeHtml(p.student_id):''}</div><div class="qty">📞 ${escapeHtml(p.contact||'-')}</div></div>
+      <button class="btn btn-danger btn-sm" data-action="delete-user" data-id="${p.id}">ลบ</button></div>`).join('') + `</div>`;
+}
+async function deleteUser(id){
+  const ok = await confirmModal({title:'ลบผู้ใช้งานนี้?', desc:'ผู้ใช้จะต้องลงทะเบียนใหม่หากต้องการเข้าใช้งานอีกครั้ง', okLabel:'ลบ', danger:true});
+  if(!ok) return;
+  try{ await callRpc('admin_delete_profile', {p_admin_id: state.profile.id, p_target_id:id}); showToast('ลบแล้ว','ok'); render(); }catch(e){}
+}
+
+/* ---------- settings ---------- */
+async function renderSettings(){
+  const p = state.profile;
+  viewEl.innerHTML = `<div class="section"><div class="section-title"><h2>ตั้งค่า</h2></div></div>
+  <div class="section" style="padding-top:0;"><div class="solid-card">
+    <div class="form-field"><label>ชื่อ-นามสกุล</label><input id="set-name" value="${escapeHtml(p.name)}" ${p.role==='student'?'disabled':''}></div>
+    <div class="form-field"><label>ช่องทางการติดต่อ</label><input id="set-contact" value="${escapeHtml(p.contact)}"></div>
+    <button class="btn btn-primary" data-action="save-profile" style="margin-bottom:10px;">บันทึกการเปลี่ยนแปลง</button>
+    <button class="btn btn-ghost" data-action="toggle-dark">${state.darkMode?'☀️ โหมดสว่าง':'🌙 โหมดมืด'}</button>
+  </div></div>
+  <div class="section" style="padding-top:0;"><div class="section-title"><h2>ครูในระบบ</h2></div></div>
+  <div id="teacher-list-zone"><div class="skeleton" style="height:100px;margin:0 18px;"></div></div>
+  <div class="section"><button class="btn btn-outline" data-action="logout">ออกจากระบบ</button></div>`;
+  const { data } = await sb.from('profiles').select('*').eq('role','admin').eq('admin_type','teacher').order('name');
+  const zone = document.getElementById('teacher-list-zone');
+  if(zone){
+    zone.innerHTML = (data && data.length) ? `<div class="section" style="padding-top:0;">` + data.map(t=>`
+      <div class="res-card"><div class="thumb">🧑‍🏫</div><div class="info"><div class="nm">${escapeHtml(t.name)}</div><div class="qty">${escapeHtml(t.contact)}</div></div></div>`).join('') + `</div>`
+      : `<div class="empty-state"><span class="ic">🧑‍🏫</span>ยังไม่มีครูลงทะเบียน</div>`;
+  }
+}
+async function saveProfile(){
+  const name = document.getElementById('set-name').value.trim();
+  const contact = document.getElementById('set-contact').value.trim();
+  try{ const updated = await callRpc('update_own_profile', {p_id: state.profile.id, p_name:name, p_contact:contact}); state.profile = updated; showToast('บันทึกแล้ว','ok'); render(); }catch(e){}
+}
+function logout(){ unsubscribeRealtime(); state.profile=null; state.view='roleSelect'; state.crumbs=[]; render(); }
+
+/* ---------- notifications ---------- */
+async function openNotifs(){
+  const { data } = await sb.from('notifications').select('*').eq('user_id', state.profile.id).order('created_at',{ascending:false}).limit(20);
+  const zone = document.getElementById('modal-zone');
+  zone.innerHTML = `<div class="modal-back" data-modal-back><div class="modal-sheet">
+    <h3>การแจ้งเตือน</h3>
+    <div style="max-height:50vh;overflow:auto;">
+      ${(data&&data.length) ? data.map(n=>`<div class="slot-row" style="display:block;padding:10px 0;">
+        <div style="font-size:13px;${n.is_read?'color:var(--ink-faint);':'font-weight:700;'}">${escapeHtml(n.message)}</div>
+        <div style="font-size:10.5px;color:var(--ink-faint);">${new Date(n.created_at).toLocaleString('th-TH')}</div></div>`).join('') : `<div class="empty-state"><span class="ic">🔔</span>ไม่มีการแจ้งเตือน</div>`}
+    </div>
+    <div class="modal-actions" style="margin-top:14px;"><button class="btn btn-primary" data-modal-cancel>ปิด</button></div>
+  </div></div>`;
+  zone.querySelector('[data-modal-cancel]').onclick = ()=>{ zone.innerHTML=''; };
+  zone.querySelector('[data-modal-back]').onclick = (e)=>{ if(e.target===e.currentTarget) zone.innerHTML=''; };
+  await callRpc('mark_notifications_read', {p_user_id: state.profile.id}, {silent:true}).catch(()=>{});
+  state.notifUnread = 0; renderTopbar();
+}
+async function loadNotifCount(){
+  const { count } = await sb.from('notifications').select('*',{count:'exact',head:true}).eq('user_id', state.profile.id).eq('is_read', false);
+  state.notifUnread = count || 0; renderTopbar();
+}
+
+/* ---------- realtime ---------- */
+function subscribeRealtime(){
+  unsubscribeRealtime();
+  bookingsChannel = sb.channel('bookings-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'bookings'}, ()=>{
+      if(['myBookings','approvals','categoryBrowse','resourceDetail','booking','dashboard'].includes(state.view)) render();
+    }).subscribe();
+  notifChannel = sb.channel('notif-'+state.profile.id)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'notifications', filter:'user_id=eq.'+state.profile.id}, (payload)=>{
+      state.notifUnread++; renderTopbar(); showToast(payload.new.message, 'ok');
+    }).subscribe();
+}
+function unsubscribeRealtime(){
+  if(bookingsChannel){ sb.removeChannel(bookingsChannel); bookingsChannel=null; }
+  if(notifChannel){ sb.removeChannel(notifChannel); notifChannel=null; }
+}
+
+/* ---------- dark mode ---------- */
+function toggleDark(){
+  state.darkMode = !state.darkMode;
+  document.body.classList.toggle('dark', state.darkMode);
+  renderTopbar();
+  if(state.view==='settings') render();
+}
+
+/* ---------- event delegation ---------- */
+document.addEventListener('click', async (e)=>{
+  const el = e.target.closest('[data-action]'); if(!el) return;
+  const action = el.dataset.action;
+  switch(action){
+    case 'pick-role': await pickRole(el.dataset.role); break;
+    case 'back-to-roles': state.view='roleSelect'; state.pendingRole=null; render(); break;
+    case 'confirm-student-register': await confirmStudentRegister(); break;
+    case 'auth-tab': state.authTab = el.dataset.tab; render(); break;
+    case 'set-admin-kind': state.registerAdminKind = el.dataset.kind; render(); break;
+    case 'open-manager-picker': openManagerPicker(); break;
+    case 'pick-teacher-name': {
+      const input = document.getElementById('admin-name-input');
+      if(input) input.value = el.dataset.name;
+      const box = document.getElementById('name-suggestions');
+      if(box){ box.style.display='none'; box.innerHTML=''; }
+    } break;
+    case 'nav': state.view = el.dataset.view; if(el.dataset.view==='booking'){ state.crumbs=[]; state.currentCategoryId=null; } render(); break;
+    case 'open-category': await openCategory(el.dataset.id, el.dataset.name); break;
+    case 'crumb-home': state.crumbs=[]; state.view='booking'; render(); break;
+    case 'crumb-jump': { const idx=Number(el.dataset.index); state.crumbs=state.crumbs.slice(0,idx+1); state.currentCategoryId=state.crumbs[idx].id; state.view='categoryBrowse'; render(); } break;
+    case 'open-resource': await openResource(el.dataset.id); break;
+    case 'open-book-form': await openBookForm(el.dataset.id); break;
+    case 'cancel-booking': await cancelBooking(el.dataset.id); break;
+    case 'set-status': await setBookingStatus(el.dataset.id, el.dataset.status); break;
+    case 'toggle-auto': await toggleAuto(el.dataset.id, el.dataset.field, el.dataset.val==='true'); break;
+    case 'appr-filter': state.apprFilter = el.dataset.f; render(); break;
+    case 'dash-tab': state.dashboardTab = el.dataset.t; render(); break;
+    case 'delete-resource': await deleteResource(el.dataset.id); break;
+    case 'edit-resource': await openEditResourceModal(el.dataset.id, true); break;
+    case 'edit-managed-resource': await openEditResourceModal(el.dataset.id, false); break;
+    case 'delete-user': await deleteUser(el.dataset.id); break;
+    case 'export-history': exportHistory(); break;
+    case 'toggle-dark': toggleDark(); break;
+    case 'open-notifs': await openNotifs(); break;
+    case 'save-profile': await saveProfile(); break;
+    case 'logout': logout(); break;
+    case 'demo-login': { const u = DEMO_USERS[el.dataset.role]; if(u) onLoginSuccess(u); } break;
+  }
+});
+document.addEventListener('submit', async (e)=>{
+  const form = e.target.closest('[data-form]'); if(!form) return;
+  e.preventDefault();
+  const kind = form.dataset.form;
+  if(kind==='register') await handleRegisterSubmit(form);
+  else if(kind==='login') await handleLoginSubmit(form);
+  else if(kind==='add-category') await addCategory(form);
+  else if(kind==='add-resource') await addResource(form);
+});
+document.addEventListener('input', (e)=>{
+  if(e.target.id !== 'admin-name-input') return;
+  const q = e.target.value.trim().toLowerCase();
+  const box = document.getElementById('name-suggestions');
+  if(!box) return;
+  if(!q){ box.style.display='none'; box.innerHTML=''; return; }
+  const matches = (state.cache.teacherDirectory||[]).filter(t=>t.name.toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='block';
+  box.innerHTML = matches.map(t=>`<div data-action="pick-teacher-name" data-name="${escapeHtml(t.name)}" style="padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid rgba(139,92,246,.1);">${escapeHtml(t.name)}</div>`).join('');
+});
+
+/* ============================================================
+   โหมดทดลอง (Demo) — ใช้เมื่อยังไม่ได้ใส่ SUPABASE_URL/ANON_KEY จริง
+   ============================================================ */
+let DEMO_MODE = false;
+const DEMO_USERS = {};
+(function boot(){
+  if(!SUPABASE_URL || SUPABASE_URL.includes('YOUR_') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('YOUR_')){
+    DEMO_MODE = true;
+    document.getElementById('demo-ribbon').classList.remove('hidden');
+    document.getElementById('demo-ribbon').textContent = 'กรุณาตั้งค่า SUPABASE_URL / SUPABASE_ANON_KEY ก่อนใช้งานจริง';
+    return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:false } });
+  render();
+})();
+</script>
+</body>
+</html>
