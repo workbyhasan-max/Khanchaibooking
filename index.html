@@ -1266,7 +1266,7 @@ document.addEventListener('input', (e)=>{
   const q = e.target.value.trim().toLowerCase();
   const box = document.getElementById('name-suggestions');
   if(!box) return;
-  if(!q){ box.style.display='none'; box.innerHTML=''; return; }
+  if(!q){ box.style.display='none'; box.innerHTML=''; return; 
   const matches = (state.cache.teacherDirectory||[]).filter(t=>t.name.toLowerCase().includes(q)).slice(0,8);
   if(!matches.length){ box.style.display='none'; box.innerHTML=''; return; 
   box.style.display='block';
