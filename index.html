@@ -1273,7 +1273,21 @@ document.addEventListener('input', (e)=>{
   box.innerHTML = matches.map(t=>`<div data-action="pick-teacher-name" data-name="${escapeHtml(t.name)}" style="padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid rgba(139,92,246,.1);">${escapeHtml(t.name)}</div>`).join('');
 });
 
-)();
-<script>
-<body>
-<html>
+/* ============================================================
+   โหมดทดลอง (Demo) — ใช้เมื่อยังไม่ได้ใส่ SUPABASE_URL/ANON_KEY จริง
+   ============================================================ */
+let DEMO_MODE = false;
+const DEMO_USERS = {};
+(function boot(){
+  if(!SUPABASE_URL || SUPABASE_URL.includes('YOUR_') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('YOUR_')){
+    DEMO_MODE = true;
+    document.getElementById('demo-ribbon').classList.remove('hidden');
+    document.getElementById('demo-ribbon').textContent = 'กรุณาตั้งค่า SUPABASE_URL / SUPABASE_ANON_KEY ก่อนใช้งานจริง';
+    return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:false } });
+  render();
+})();
+</script>
+</body>
+</html>
