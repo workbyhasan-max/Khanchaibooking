@@ -530,7 +530,7 @@ function tplStudentRegister(){
     <button class="btn btn-outline btn-sm" data-action="back-to-roles" style="margin-bottom:14px;">‹ กลับ</button>
     <div class="glass-card">
       <h2 style="margin:0 0 4px;font-size:18px;">ลงทะเบียนนักเรียน</h2>
-      <p style="margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;">กรอกรหัสประจำตัวนักเรียน 5 ตัวหลัง ระบบจะดึงชื่อและห้องของคุณให้อัตโนมัติ</p>
+      <p style="margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;">กรอกรหัสประจำตัวนักเรียน 5 ตัวหลัก ระบบจะดึงชื่อและห้องของคุณให้อัตโนมัติ</p>
       <div class="otp-row" id="otp-row">
         ${[0,1,2,3,4].map(i=>`<input class="otp-box" data-otp-idx="${i}" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off">`).join('')}
       </div>
