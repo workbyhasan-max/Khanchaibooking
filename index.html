@@ -80,6 +80,7 @@ a{color:inherit;}
   display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff;
   box-shadow:var(--shadow-soft);
 }
+.school-name{margin:0 0 6px;font-family:'Prompt',sans-serif;font-size:16px;font-weight:700;line-height:1.35;color:var(--ink);}
 .hero-wrap h1{font-size:23px;margin:0 0 4px;font-weight:800;letter-spacing:.2px;}
 .hero-wrap p{margin:0;color:var(--ink-soft);font-size:13.5px;}
 .role-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:6px 18px 18px;}
@@ -502,7 +503,7 @@ function renderNav(){
 
 /* ---------- role select ---------- */
 function tplRoleSelect(){
-  return `<div class="hero-wrap"><div class="hero-crest"><img src="${SCHOOL_LOGO}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div><h1>${SYSTEM_NAME}</h1><p>เลือกสถานะของคุณเพื่อเริ่มต้นใช้งาน</p></div>
+  return `<div class="hero-wrap"><div class="hero-crest"><img src="${SCHOOL_LOGO}" alt="โลโก้โรงเรียน" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div><div class="school-name">โรงเรียนสะเดา&quot;ขรรค์ชัยกัมพลานนท์อนุสรณ์&quot;</div><h1>${SYSTEM_NAME}</h1><p>เลือกสถานะของคุณเพื่อเริ่มต้นใช้งาน</p></div>
   <div class="role-grid">
     <button class="role-card" data-action="pick-role" data-role="student"><span class="ic">🧑‍🎓</span><span class="lbl">นักเรียน</span></button>
     <button class="role-card" data-action="pick-role" data-role="admin"><span class="ic">🛡️</span><span class="lbl">ผู้ดูแลระบบ</span></button>
@@ -530,7 +531,7 @@ function tplStudentRegister(){
     <button class="btn btn-outline btn-sm" data-action="back-to-roles" style="margin-bottom:14px;">‹ กลับ</button>
     <div class="glass-card">
       <h2 style="margin:0 0 4px;font-size:18px;">ลงทะเบียนนักเรียน</h2>
-      <p style="margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;">กรอกรหัสประจำตัวนักเรียน 5 ตัวหลัก </p>
+      <p style="margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;">กรอกรหัสประจำตัวนักเรียน 5 ตัวหลัก ระบบจะดึงชื่อและห้องของคุณให้อัตโนมัติ</p>
       <div class="otp-row" id="otp-row">
         ${[0,1,2,3,4].map(i=>`<input class="otp-box" data-otp-idx="${i}" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off">`).join('')}
       </div>
