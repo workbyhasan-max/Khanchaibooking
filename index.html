@@ -493,7 +493,7 @@ function renderTopbar(){
 function renderNav(){
   if(!state.profile){ navEl.innerHTML=''; return; }
   const role = state.profile.role;
-  let items = [['booking','จอง','📅'],['myBookings','ของที่จอง','🗂️']];
+  let items = [['booking','จอง','📅'],['myBookings','สถานที่ที่จอง','🗂️']];
   if(role==='admin'){ items.push(['approvals','การอนุมัติ','✅']); items.push(['dashboard','Dashboard','📊']); }
   items.push(['settings','ตั้งค่า','⚙️']);
   navEl.innerHTML = `<div class="bottom-nav">${items.map(([v,l,ic])=>`
@@ -757,15 +757,15 @@ async function renderResourceDetail(){
 }
 /* ---------- คาบเรียน (period-based booking) ---------- */
 const PERIOD_TIMES = [
-  {period:1, start:'08:00', end:'08:50'},
-  {period:2, start:'08:50', end:'09:40'},
-  {period:3, start:'09:40', end:'10:30'},
-  {period:4, start:'10:30', end:'11:20'},
-  {period:5, start:'12:10', end:'13:00'},
-  {period:6, start:'13:00', end:'13:50'},
-  {period:7, start:'13:50', end:'14:40'},
-  {period:8, start:'14:40', end:'15:30'},
-  {period:9, start:'15:30', end:'16:20'},
+  {period:1, start:'08:30', end:'09:20'},
+  {period:2, start:'09:20', end:'10:10'},
+  {period:3, start:'10:10', end:'11:00'},
+  {period:4, start:'11:00', end:'11:50'},
+  {period:5, start:'11:50', end:'12:40'},
+  {period:6, start:'12:40', end:'13:30'},
+  {period:7, start:'13:30', end:'14:20'},
+  {period:8, start:'14:20', end:'15:10'},
+  {period:9, start:'15:10', end:'16:00'},
 ];
 function periodLabel(p){ const pt=PERIOD_TIMES.find(x=>x.period===p); return pt ? `คาบ ${p} (${pt.start}-${pt.end})` : `คาบ ${p}`; }
 function periodFromTime(start){ const pt=PERIOD_TIMES.find(x=>x.start===start); return pt ? pt.period : null; }
@@ -864,7 +864,7 @@ function togglePeriod(p){
 
 /* ---------- my bookings ---------- */
 async function renderMyBookings(){
-  viewEl.innerHTML = `<div class="section"><div class="section-title"><h2>ของที่จอง</h2></div></div><div id="mybk-body"><div class="skeleton" style="height:100px;margin:0 18px;"></div></div>`;
+  viewEl.innerHTML = `<div class="section"><div class="section-title"><h2>สถานที่ที่จอง</h2></div></div><div id="mybk-body"><div class="skeleton" style="height:100px;margin:0 18px;"></div></div>`;
   const { data, error } = await sb.from('bookings').select('*, resources(name,unit)').eq('user_id', state.profile.id).order('created_at',{ascending:false});
   const bodyEl = document.getElementById('mybk-body'); if(!bodyEl) return;
   if(error || !data || !data.length){ bodyEl.innerHTML = `<div class="empty-state"><span class="ic">🗂️</span>ยังไม่มีรายการจอง</div>`; return; }
