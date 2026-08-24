@@ -311,7 +311,7 @@ const SCHOOL_LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAYAA
    ============================================================ */
 let sb = null;
 const state = {
-  profile:null, view:'roleSelect', pendingRole:null, authTab:'register',
+  profile:null, view:'roleSelect', pendingRole:null,
   crumbs:[], currentCategoryId:null, currentResourceId:null,
   dashboardTab:'overview', darkMode:false, notifUnread:0,
   studentCode:'', studentLookup:null, studentChecking:false,
@@ -1144,7 +1144,7 @@ function subscribeRealtime(){
   unsubscribeRealtime();
   bookingsChannel = sb.channel('bookings-changes')
     .on('postgres_changes', {event:'*', schema:'public', table:'bookings'}, ()=>{
-      if(['myBookings','approvals','categoryBrowse','resourceDetail','booking','dashboard'].includes(state.view)) render();
+      if(['myBookings','categoryBrowse','resourceDetail','booking','dashboard'].includes(state.view)) render();
     }).subscribe();
   notifChannel = sb.channel('notif-'+state.profile.id)
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'notifications', filter:'user_id=eq.'+state.profile.id}, (payload)=>{
